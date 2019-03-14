@@ -2,10 +2,16 @@ package com.chain.bottle.controller;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,12 +19,20 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.chain.bottle.model.User;
+import com.chain.bottle.model.UserRepository;
+import com.chain.bottle.model.UserService;
 
 @RestController 
 @RequestMapping(value="/users")
 public class UserController {
     static Map<Long, User> users = Collections.synchronizedMap(new HashMap<Long, User>());
-
+    
+    @Autowired
+    private UserService userService;
+    
+    @Autowired
+	private UserRepository userRepository;
+    
     @RequestMapping(value="/", method=RequestMethod.GET)
     public List<User> getUserList() {
         // 还可以通过@RequestParam从页面中传递参数来进行查询条件或者翻页信息的传递
@@ -54,5 +68,34 @@ public class UserController {
         // 处理"/users/{id}"的DELETE请求，用来删除User
         users.remove(id);
         return "success";
+    }
+    
+    @RequestMapping(value="/addUserToDB", method=RequestMethod.POST)
+    public String addUserToDB(@ModelAttribute User user) {
+    	userService.create(user.getName(), user.getAge());
+    	return "success";
+    }
+    
+    @RequestMapping(value="/addUserToDB2", method=RequestMethod.POST)
+    public String addUserToDB2(@ModelAttribute User user) {
+    	userRepository.save(new User(user.getName(), user.getAge(), new Date()));
+    	return "success";
+    }
+    
+    @RequestMapping(value="/getAllUsers", method=RequestMethod.GET)
+    public List<User> getAllUsers() {
+    	List<User> userList = new ArrayList<User>();
+    	Sort sort=new Sort(Sort.Direction.DESC, "createTime");
+    	userList = userRepository.findAll(sort);
+        return userList;
+    }
+    
+    @RequestMapping(value="/getAllUsers/{page}/{limit}", method=RequestMethod.GET)
+    public Page<User> getAllUsers(@PathVariable Integer page, @PathVariable Integer limit) {
+    	Sort sort = new Sort(Sort.Direction.DESC, "createTime");
+    	System.out.println("page = " + page);
+    	System.out.println("limit = " + limit);
+    	Pageable pageable=PageRequest.of(page, limit, sort);
+        return userRepository.findAll(pageable);
     }
 }
